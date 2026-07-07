@@ -26,16 +26,9 @@
         <label for="url-pattern">URL Pattern</label>
         <input type="text" id="url-pattern" placeholder="*://api.example.com/*" required>
 
-        <label for="header-name">Header Name</label>
-        <div class="header-name-row">
-          <select id="header-preset">
-            <option value="custom">Custom…</option>
-          </select>
-          <input type="text" id="header-name" value="Authorization" required>
-        </div>
-
-        <label for="header-value">Header Value</label>
-        <input type="text" id="header-value" placeholder="co-" required autocomplete="off">
+        <label>Headers</label>
+        <div id="headers-list" class="headers-list"></div>
+        <button type="button" id="btn-add-header" class="btn btn-secondary btn-add-header">+ Add Header</button>
 
         <label class="toggle-row">
           <input type="checkbox" id="rule-enabled" checked>

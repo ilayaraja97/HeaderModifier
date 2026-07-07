@@ -6,7 +6,8 @@ const STORAGE_KEY = 'headerRules';
  * Uses regexFilter for full pattern fidelity across scheme, host, and path.
  */
 function matchPatternToCondition(urlPattern) {
-  const parsed = parseMatchPattern(urlPattern);
+  const normalized = urlPattern === '<all_urls>' ? '*://*/*' : urlPattern;
+  const parsed = parseMatchPattern(normalized);
   if (!parsed) {
     throw new Error(`Invalid URL pattern: ${urlPattern}`);
   }
@@ -81,13 +82,11 @@ function buildDnrRule(rule, ruleId) {
     },
     action: {
       type: 'modifyHeaders',
-      requestHeaders: [
-        {
-          header: rule.headerName,
-          operation: 'set',
-          value: rule.headerValue,
-        },
-      ],
+      requestHeaders: rule.headers.map(({ name, value }) => ({
+        header: name,
+        operation: 'set',
+        value,
+      })),
     },
   };
 }
@@ -100,7 +99,7 @@ async function applyRules() {
 
   const addRules = headerRules
     .map((rule, index) => ({ rule, ruleId: index + 1 }))
-    .filter(({ rule }) => rule.enabled)
+    .filter(({ rule }) => rule.enabled && rule.headers && rule.headers.length > 0)
     .map(({ rule, ruleId }) => {
       try {
         return buildDnrRule(rule, ruleId);
