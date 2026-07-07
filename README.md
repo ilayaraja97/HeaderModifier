@@ -63,6 +63,9 @@ Use [Chrome match patterns](https://developer.chrome.com/docs/extensions/develop
 | `*://api.example.com/*` | Any scheme, `api.example.com`, any path |
 | `https://api.example.com/*` | HTTPS only |
 | `*://*.example.com/*` | Any subdomain of `example.com` |
+| `<all_urls>` | Every HTTP/HTTPS URL (expands to `*://*/*`) |
+
+A bare `*` is not a valid pattern — Chrome match patterns always require a scheme, host, and path. Use `<all_urls>` when you want to match everything.
 
 ## Project structure
 
@@ -86,7 +89,9 @@ Rules are stored in `chrome.storage.sync` under the key `headerRules`:
   "id": "rule-uuid",
   "enabled": true,
   "urlPattern": "*://api.example.com/*",
-  "headerName": "Authorization",
-  "headerValue": "Bearer eyJ..."
+  "headers": [
+    { "name": "Authorization", "value": "Bearer eyJ..." },
+    { "name": "X-API-Key", "value": "..." }
+  ]
 }
 ```

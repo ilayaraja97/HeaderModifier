@@ -9,25 +9,41 @@ const ruleForm = document.getElementById('rule-form');
 const formTitle = document.getElementById('form-title');
 const ruleIdInput = document.getElementById('rule-id');
 const urlPatternInput = document.getElementById('url-pattern');
-const headerPresetSelect = document.getElementById('header-preset');
-const headerNameInput = document.getElementById('header-name');
-const headerValueInput = document.getElementById('header-value');
+const headersList = document.getElementById('headers-list');
 const ruleEnabledInput = document.getElementById('rule-enabled');
 
 document.getElementById('btn-add').addEventListener('click', () => showForm());
 document.getElementById('btn-cancel').addEventListener('click', () => showList());
+document.getElementById('btn-add-header').addEventListener('click', () => addHeaderRow());
 ruleForm.addEventListener('submit', handleSave);
 
-headerPresetSelect.addEventListener('change', () => {
-  if (headerPresetSelect.value === 'custom') {
-    headerNameInput.classList.remove('hidden-input');
-    headerNameInput.value = '';
-    headerNameInput.focus();
-  } else {
-    headerNameInput.classList.add('hidden-input');
-    headerNameInput.value = headerPresetSelect.value;
-  }
-});
+function addHeaderRow(name = '', value = '') {
+  const row = document.createElement('div');
+  row.className = 'header-row';
+
+  const nameInput = document.createElement('input');
+  nameInput.type = 'text';
+  nameInput.className = 'header-name-input';
+  nameInput.placeholder = 'Header name';
+  nameInput.value = name;
+
+  const valueInput = document.createElement('input');
+  valueInput.type = 'text';
+  valueInput.className = 'header-value-input';
+  valueInput.placeholder = 'Header value';
+  valueInput.autocomplete = 'off';
+  valueInput.value = value;
+
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'btn-remove-header';
+  removeBtn.title = 'Remove header';
+  removeBtn.textContent = '×';
+  removeBtn.addEventListener('click', () => row.remove());
+
+  row.append(nameInput, valueInput, removeBtn);
+  headersList.appendChild(row);
+}
 
 function generateId() {
   return `rule-${crypto.randomUUID()}`;
@@ -53,32 +69,19 @@ function showForm(rule) {
   listView.classList.add('hidden');
   formView.classList.remove('hidden');
 
+  headersList.innerHTML = '';
+
   if (rule) {
     formTitle.textContent = 'Edit Rule';
     ruleIdInput.value = rule.id;
     urlPatternInput.value = rule.urlPattern;
-    headerValueInput.value = rule.headerValue;
     ruleEnabledInput.checked = rule.enabled;
-
-    const preset = ['Authorization', 'X-API-Key'].includes(rule.headerName)
-      ? rule.headerName
-      : 'custom';
-
-    headerPresetSelect.value = preset;
-    if (preset === 'custom') {
-      headerNameInput.classList.remove('hidden-input');
-      headerNameInput.value = rule.headerName;
-    } else {
-      headerNameInput.classList.add('hidden-input');
-      headerNameInput.value = rule.headerName;
-    }
+    rule.headers.forEach(({ name, value }) => addHeaderRow(name, value));
   } else {
     formTitle.textContent = 'Add Rule';
     ruleIdInput.value = '';
-    headerPresetSelect.value = 'Authorization';
-    headerNameInput.classList.add('hidden-input');
-    headerNameInput.value = 'Authorization';
     ruleEnabledInput.checked = true;
+    addHeaderRow('Authorization');
   }
 }
 
@@ -104,9 +107,10 @@ async function renderRules() {
         </span>
       </div>
       <div class="rule-url">${escapeHtml(rule.urlPattern)}</div>
+      ${rule.headers.map((h) => `
       <div class="rule-header">
-        ${escapeHtml(rule.headerName)}: <span class="rule-value-masked">${MASKED_VALUE}</span>
-      </div>
+        ${escapeHtml(h.name)}: <span class="rule-value-masked">${MASKED_VALUE}</span>
+      </div>`).join('')}
       <div class="rule-actions">
         <button type="button" class="btn btn-icon btn-edit">Edit</button>
         <button type="button" class="btn btn-icon btn-toggle">${rule.enabled ? 'Disable' : 'Enable'}</button>
@@ -125,12 +129,15 @@ async function renderRules() {
 async function handleSave(e) {
   e.preventDefault();
 
-  const headerName = headerPresetSelect.value === 'custom'
-    ? headerNameInput.value.trim()
-    : headerPresetSelect.value;
+  const headers = Array.from(headersList.querySelectorAll('.header-row'))
+    .map((row) => ({
+      name: row.querySelector('.header-name-input').value.trim(),
+      value: row.querySelector('.header-value-input').value,
+    }))
+    .filter((h) => h.name);
 
-  if (!headerName) {
-    alert('Header name is required.');
+  if (headers.length === 0) {
+    alert('At least one header name is required.');
     return;
   }
 
@@ -138,8 +145,7 @@ async function handleSave(e) {
     id: ruleIdInput.value || generateId(),
     enabled: ruleEnabledInput.checked,
     urlPattern: urlPatternInput.value.trim(),
-    headerName,
-    headerValue: headerValueInput.value,
+    headers,
   };
 
   if (!isValidMatchPattern(ruleData.urlPattern)) {
@@ -181,6 +187,9 @@ async function deleteRule(id) {
 }
 
 function isValidMatchPattern(pattern) {
+  if (pattern === '<all_urls>') {
+    return true;
+  }
   return /^(\*|https?|file|ftp):\/\/([^/]+)(\/.*)?$/.test(pattern);
 }
 
@@ -190,5 +199,4 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-headerNameInput.classList.add('hidden-input');
 renderRules();
